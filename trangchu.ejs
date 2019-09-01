@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Home</title>
+    <style>
+    .blank {margin:5px} .lineChat{padding:10px;text-align:center;border:solid 1px gray; margin-top:5px}
+    .hotenChat{color:indianred;} .ndungChat, .hotenChat{text-align: center}
+    .chatImg{width:30px; border-radius: 15px;}
+    </style>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="jquery.js"></script>
+    <script>
+    var socket = io("http://localhost:3000");
+    var roomPrefix = "Thanos2019-";
+
+    socket.on("server-gui-dsroom", function(data){
+        
+        $("#selectRoom").html("");
+
+        for(room in data){
+            if(room.includes(roomPrefix)){
+                room = room.replace(roomPrefix, "");
+                $("#selectRoom").append(`
+                <option value="`+ room +`">` + room + `</option>
+                `);
+            }
+            
+        }
+    });
+
+    socket.on("server-send-ms", function(data){
+        console.log(data);
+        $("#listMessage").append(`
+        <div class="lineChat">
+            <img class="chatImg" src="upload/`+ data.hinh +`" />
+            <div class="hotenChat">`+ data.hoten +`</div> 
+            <div class="ndungChat">`+ data.ms +`</div>  
+        </div>
+        `);
+    });
+
+    $(document).ready(function(){
+        
+        $("#btnTaoRoom").click(function(){
+            socket.emit("client-gui-tenroom", $("#txtRoomName").val());
+        });
+
+        $("#btnDatTen").click(function(){
+            socket.emit("client-gui-hoten", $("#txtHoTen").val());
+        });
+
+        $("#btnUploadHinh").click(function(){
+            
+            var data = new FormData();
+            jQuery.each(jQuery('#fileAvatar')[0].files, function(i, file) {
+                console.log('file-'+i);
+                data.append('file-'+i, file);
+            });
+
+            jQuery.ajax({
+                url: './xuly',
+                data: data,
+                cache: false,
+                contentType: false,
+                processData: false,
+                method: 'POST',
+                type: 'POST', // For jQuery < 1.9
+                success: function(data){
+                    if(data.kq==1){
+                        $("#imgAvatar").attr("src","upload/" + data.file);
+                        socket.emit("client-gui-Avatar", data.file);
+                    }else{
+                        alert("Upload fail!");
+                    }
+                }
+            });
+
+        });
+
+        $("#selectRoom").change(function(){
+            socket.emit("client-join-roommoi", $(this).val());
+        });
+
+        $("#btnChat").click(function(){
+            socket.emit("client-send-message", 
+                {
+                    "message":$("#txtMessage").val(),
+                    "roomName":$("#selectRoom").val()
+                }
+            );
+        });
+
+    });
+    </script>
+</head>
+<body>
+    <select id="selectRoom">
+        <option value="0">--Chon--</option>
+    </select>
+
+    <input type="text" id="txtRoomName" placeholder="Tên room" />
+    <input type="button" id="btnTaoRoom" value="Tạo room" />
+    <div class="blank"></div> 
+
+    <input type="text" id="txtHoTen" placeholder="Họ tên" />
+    <input type="button" id="btnDatTen" value="Đặt tên" />
+    <div class="blank"></div>
+
+    <img id="imgAvatar" src="images/man.png" width="50" />
+    <input type="file" id="fileAvatar" />
+    <input type="button" id="btnUploadHinh" value="Upload" />
+    <div class="blank"></div>
+
+    <input type="text" id="txtMessage" placeholder="Message" />
+    <input type="button" id="btnChat" value="Chat" />
+
+    <div id="listMessage"></div>
+    
+
+</body>
+</html>
